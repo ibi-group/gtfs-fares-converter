@@ -15,3 +15,5 @@ python __init__.py /path/to/current-fares-v1-gtfs.zip /path/to/new-fares-v2-gtfs
 ## Notes
 
 - The script creates a temporary directory under `/tmp/gtfs/`. Make sure you have write permissions.
+- Paid transfers are not currently supported.
+- The `contains_id` field in fare_rules.txt is not currently supported.

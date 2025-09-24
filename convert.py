@@ -1,4 +1,3 @@
-from math import nan
 import partridge as ptg
 import pandas as pd
 import os
@@ -46,6 +45,16 @@ def convert_fares(input, output):
             "is_symmetrical"
         ]
     )
+    fare_transfer_rules = pd.DataFrame(
+        columns=[
+            "from_leg_group_id",
+            "to_leg_group_id",
+            "duration_limit",
+            "transfer_count",
+            "fare_transfer_type"
+            # "fare_product_id"
+        ]
+    )
     networks = pd.DataFrame(columns=["network_id", "network_name"])
     route_networks = pd.DataFrame(columns=["network_id", "route_id"])
     stop_areas = pd.DataFrame(columns=["stop_id", "area_id"])
@@ -60,17 +69,18 @@ def convert_fares(input, output):
 
     # If adding rider category support, this is where it would happen.
 
-    # Generate networks from agencies
-    for a in agency.itertuples():
+    # Generate networks from routes
+    for r in routes.itertuples():
         networks.loc[len(networks)] = {
-            "network_id": a.agency_id,
-            "network_name": a.agency_name,
+            "network_id": r.route_id,
+            "network_name": r.route_id,
         }
 
     # Convert route-based fare rules
     if len(fare_rules) != 0:
         route_rules = fare_rules[fare_rules["route_id"].notna()]
         for rule in route_rules.itertuples():
+            cur_uuid = uuid.uuid4()
             fare_products.loc[len(fare_products)] = {
                 "fare_product_id": rule.fare_id,
                 "fare_product_name": rule.fare_id,
@@ -80,16 +90,42 @@ def convert_fares(input, output):
             }
             route_networks.loc[len(route_networks)] = {
                 "route_id": rule.route_id,
-                "network_id": routes[routes["route_id"] == rule.route_id].iloc[0].agency_id,
+                "network_id": rule.route_id,
             }
             fare_leg_rules.loc[len(fare_leg_rules)] = {
-                "leg_group_id": uuid.uuid4(),
-                "network_id": routes[routes["route_id"] == rule.route_id].iloc[0].agency_id,
+                "leg_group_id": cur_uuid,
+                "network_id": rule.route_id,
                 "fare_product_id": rule.fare_id,
                 "from_area_id": "",
                 "to_area_id": "",
                 "is_symmetrical": ""
             }
+
+            relevant_attribs = fare_attributes[fare_attributes["fare_id"] == rule.fare_id]
+            if (len(relevant_attribs) != 0):
+                relevant_attrib = relevant_attribs.iloc[0]
+
+                transfer_count = relevant_attrib.transfers
+                # Don't write a transfer if transfer_count is 0
+                if transfer_count == 0:
+                    continue
+                if pd.isnull(transfer_count):
+                    transfer_count = -1
+
+                duration_limit = relevant_attrib.transfer_duration
+                duration_limit_type = "0"
+                if duration_limit is None or duration_limit == 0:
+                    duration_limit = ""
+                    duration_limit_type = ""
+
+                fare_transfer_rules.loc[len(fare_transfer_rules)] = {
+                    "from_leg_group_id": cur_uuid,
+                    "to_leg_group_id": "",
+                    "duration_limit": duration_limit,
+                    "duration_limit_type": duration_limit_type,
+                    "transfer_count": transfer_count,
+                    "fare_transfer_type": 0 # TODO: Allow customization?
+                }
 
 
     # Convert stop-based fare rules
@@ -128,8 +164,6 @@ def convert_fares(input, output):
                 "fare_product_id": rule.fare_id,
             }
 
-    # TODO: transfers
-    #
 
     # Agency-based fares (no fare rules file present)
     if len(fare_rules) == 0:
@@ -159,6 +193,7 @@ def convert_fares(input, output):
 
     # Clean up duplicate data
     fare_leg_rules = fare_leg_rules.drop_duplicates().dropna()
+    fare_transfer_rules = fare_transfer_rules.drop_duplicates().dropna()
     route_networks = route_networks.drop_duplicates().dropna()
     fare_products = fare_products.drop_duplicates().dropna()
     stop_areas = stop_areas.drop_duplicates().dropna()
@@ -173,6 +208,8 @@ def convert_fares(input, output):
         fare_products.to_csv(f"{output_dir}/fare_products.txt", index=False)
     if len(fare_leg_rules) != 0:
         fare_leg_rules.to_csv(f"{output_dir}/fare_leg_rules.txt", index=False)
+    if len(fare_transfer_rules) != 0:
+        fare_transfer_rules.to_csv(f"{output_dir}/fare_transfer_rules.txt", index=False)
     if len(networks) != 0:
         networks.to_csv(f"{output_dir}/networks.txt", index=False)
     if len(route_networks) != 0:
