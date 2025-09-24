@@ -131,7 +131,31 @@ def convert_fares(input, output):
     # TODO: transfers
     #
 
-    # TODO: agency-based fares (no fare rules file present)
+    # Agency-based fares (no fare rules file present)
+    if len(fare_rules) == 0:
+       if len(fare_attributes) != 0:
+           for attrib in fare_attributes.itertuples():
+               agency_routes = routes[routes["agency_id"] == attrib.agency_id]
+               for route in agency_routes.itertuples():
+                   fare_products.loc[len(fare_products)] = {
+                       "fare_product_id": route.route_id,
+                       "fare_product_name": route.route_id,
+                       "amount": attrib.price,
+                       "currency": attrib.currency_type,
+                       "fare_media_id": 0,
+                   }
+                   route_networks.loc[len(route_networks)] = {
+                       "route_id": route.route_id,
+                       "network_id": attrib.agency_id,
+                   }
+                   fare_leg_rules.loc[len(fare_leg_rules)] = {
+                       "leg_group_id": uuid.uuid4(),
+                       "network_id": attrib.agency_id,
+                       "fare_product_id": route.route_id,
+                       "from_area_id": "",
+                       "to_area_id": "",
+                       "is_symmetrical": ""
+                   }
 
     # Clean up duplicate data
     fare_leg_rules = fare_leg_rules.drop_duplicates().dropna()
