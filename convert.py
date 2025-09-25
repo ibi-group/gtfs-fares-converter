@@ -132,8 +132,9 @@ def convert_fares(input, output):
                 }
 
     # Convert zones to areas
-    if len(stops) != 0:
-        for stop in stops.itertuples():
+    if len(stops) != 0 and "zone_id" in stops.index:
+        stop_with_zones = stops[stops["zone_id"].notna()]
+        for stop in stop_with_zones.itertuples():
             areas.loc[len(areas)] = {"area_id": stop.zone_id, "area_name": stop.zone_id}
             stop_areas.loc[len(stop_areas)] = {
                 "area_id": stop.zone_id,
