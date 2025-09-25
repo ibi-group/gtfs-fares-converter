@@ -42,7 +42,6 @@ def convert_fares(input, output):
             "fare_product_id",
             "from_area_id",
             "to_area_id",
-            "is_symmetrical"
         ]
     )
     fare_transfer_rules = pd.DataFrame(
@@ -51,7 +50,7 @@ def convert_fares(input, output):
             "to_leg_group_id",
             "duration_limit",
             "transfer_count",
-            "fare_transfer_type"
+            "fare_transfer_type",
             # "fare_product_id"
         ]
     )
@@ -84,8 +83,12 @@ def convert_fares(input, output):
             fare_products.loc[len(fare_products)] = {
                 "fare_product_id": rule.fare_id,
                 "fare_product_name": rule.fare_id,
-                "amount": fare_attributes[fare_attributes["fare_id"] == rule.fare_id].iloc[0].price,
-                "currency": fare_attributes[fare_attributes["fare_id"] == rule.fare_id].iloc[0].currency_type,
+                "amount": fare_attributes[fare_attributes["fare_id"] == rule.fare_id]
+                .iloc[0]
+                .price,
+                "currency": fare_attributes[fare_attributes["fare_id"] == rule.fare_id]
+                .iloc[0]
+                .currency_type,
                 "fare_media_id": 0,
             }
             route_networks.loc[len(route_networks)] = {
@@ -98,11 +101,12 @@ def convert_fares(input, output):
                 "fare_product_id": rule.fare_id,
                 "from_area_id": "",
                 "to_area_id": "",
-                "is_symmetrical": ""
             }
 
-            relevant_attribs = fare_attributes[fare_attributes["fare_id"] == rule.fare_id]
-            if (len(relevant_attribs) != 0):
+            relevant_attribs = fare_attributes[
+                fare_attributes["fare_id"] == rule.fare_id
+            ]
+            if len(relevant_attribs) != 0:
                 relevant_attrib = relevant_attribs.iloc[0]
 
                 transfer_count = relevant_attrib.transfers
@@ -124,72 +128,67 @@ def convert_fares(input, output):
                     "duration_limit": duration_limit,
                     "duration_limit_type": duration_limit_type,
                     "transfer_count": transfer_count,
-                    "fare_transfer_type": 0 # TODO: Allow customization?
+                    "fare_transfer_type": 0,  # TODO: Allow customization?
                 }
 
+    # Convert zones to areas
+    if len(stops) != 0:
+        for stop in stops.itertuples():
+            areas.loc[len(areas)] = {"area_id": stop.zone_id, "area_name": stop.zone_id}
+            stop_areas.loc[len(stop_areas)] = {
+                "area_id": stop.zone_id,
+                "stop_id": stop.stop_id,
+            }
 
     # Convert stop-based fare rules
     if len(fare_rules) != 0:
         stop_rules = fare_rules[fare_rules["origin_id"].notna()]
         for rule in stop_rules.itertuples():
-            origin_stop_id = stops[stops["zone_id"] == rule.origin_id].iloc[0].stop_id
-            dest_stop_id = stops[stops["zone_id"] == rule.destination_id].iloc[0].stop_id
-
-            areas.loc[len(areas)] = {"area_id": origin_stop_id, "area_name": rule.origin_id}
-            areas.loc[len(areas)] = {
-                "area_id": dest_stop_id,
-                "area_name": rule.destination_id,
-            }
-
-            stop_areas.loc[len(areas)] = {
-                "area_id": origin_stop_id,
-                "stop_id": origin_stop_id,
-            }
-            stop_areas.loc[len(areas)] = {"area_id": dest_stop_id, "stop_id": dest_stop_id}
-
             fare_products.loc[len(fare_products)] = {
                 "fare_product_id": rule.fare_id,
                 "fare_product_name": rule.fare_id,
-                "amount": fare_attributes[fare_attributes["fare_id"] == rule.fare_id].iloc[0].price,
-                "currency": fare_attributes[fare_attributes["fare_id"] == rule.fare_id].iloc[0].currency_type,
+                "amount": fare_attributes[fare_attributes["fare_id"] == rule.fare_id]
+                .iloc[0]
+                .price,
+                "currency": fare_attributes[fare_attributes["fare_id"] == rule.fare_id]
+                .iloc[0]
+                .currency_type,
                 "fare_media_id": 0,
             }
             fare_leg_rules.loc[len(fare_leg_rules)] = {
-                "from_area_id": origin_stop_id,
-                "to_area_id": dest_stop_id,
-                "is_symmetrical": '0',
+                "from_area_id": rule.origin_id,
+                "to_area_id": rule.destination_id,
+                "is_symmetrical": "0",
                 "leg_group_id": uuid.uuid4(),
                 # "network_id": fare_attributes[fare_attributes["fare_id"] == rule.fare_id].iloc[0].agency_id,
                 "network_id": "",
                 "fare_product_id": rule.fare_id,
             }
 
-
     # Agency-based fares (no fare rules file present)
     if len(fare_rules) == 0:
-       if len(fare_attributes) != 0:
-           for attrib in fare_attributes.itertuples():
-               agency_routes = routes[routes["agency_id"] == attrib.agency_id]
-               for route in agency_routes.itertuples():
-                   fare_products.loc[len(fare_products)] = {
-                       "fare_product_id": route.route_id,
-                       "fare_product_name": route.route_id,
-                       "amount": attrib.price,
-                       "currency": attrib.currency_type,
-                       "fare_media_id": 0,
-                   }
-                   route_networks.loc[len(route_networks)] = {
-                       "route_id": route.route_id,
-                       "network_id": attrib.agency_id,
-                   }
-                   fare_leg_rules.loc[len(fare_leg_rules)] = {
-                       "leg_group_id": uuid.uuid4(),
-                       "network_id": attrib.agency_id,
-                       "fare_product_id": route.route_id,
-                       "from_area_id": "",
-                       "to_area_id": "",
-                       "is_symmetrical": ""
-                   }
+        if len(fare_attributes) != 0:
+            for attrib in fare_attributes.itertuples():
+                agency_routes = routes[routes["agency_id"] == attrib.agency_id]
+                for route in agency_routes.itertuples():
+                    fare_products.loc[len(fare_products)] = {
+                        "fare_product_id": route.route_id,
+                        "fare_product_name": route.route_id,
+                        "amount": attrib.price,
+                        "currency": attrib.currency_type,
+                        "fare_media_id": 0,
+                    }
+                    route_networks.loc[len(route_networks)] = {
+                        "route_id": route.route_id,
+                        "network_id": attrib.agency_id,
+                    }
+                    fare_leg_rules.loc[len(fare_leg_rules)] = {
+                        "leg_group_id": uuid.uuid4(),
+                        "network_id": attrib.agency_id,
+                        "fare_product_id": route.route_id,
+                        "from_area_id": "",
+                        "to_area_id": "",
+                    }
 
     # Clean up duplicate data
     fare_leg_rules = fare_leg_rules.drop_duplicates().dropna()
