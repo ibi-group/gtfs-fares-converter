@@ -181,11 +181,11 @@ def convert_fares(input, output):
                     }
                     route_networks.loc[len(route_networks)] = {
                         "route_id": route.route_id,
-                        "network_id": attrib.agency_id,
+                        "network_id": route.route_id,
                     }
                     fare_leg_rules.loc[len(fare_leg_rules)] = {
                         "leg_group_id": uuid.uuid4(),
-                        "network_id": attrib.agency_id,
+                        "network_id": route.route_id,
                         "fare_product_id": route.route_id,
                         "from_area_id": "",
                         "to_area_id": "",
