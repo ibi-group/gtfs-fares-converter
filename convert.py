@@ -30,11 +30,16 @@ def convert_fares(input, output):
             "amount",
             "currency",
             "fare_media_id",
+            "rider_category_id",
         ]
     )
     fare_media = pd.DataFrame(
         columns=["fare_media_id", "fare_media_name", "fare_media_type"]
     )
+    rider_categories = pd.DataFrame(
+        columns=["rider_category_id", "rider_category_name", "is_default_fare_category"]
+    )
+
     fare_leg_rules = pd.DataFrame(
         columns=[
             "leg_group_id",
@@ -66,7 +71,11 @@ def convert_fares(input, output):
         "fare_media_type": 0,
     }
 
-    # If adding rider category support, this is where it would happen.
+    rider_categories.loc[len(rider_categories)] = {
+        "rider_category_id": "ADULT",  # TODO: is this reasonable?
+        "rider_category_name": "Fare",  # TODO: Call it the adult fare?
+        "is_default_fare_category": 1,
+    }
 
     # Generate networks from routes
     for r in routes.itertuples():
@@ -90,6 +99,7 @@ def convert_fares(input, output):
                 .iloc[0]
                 .currency_type,
                 "fare_media_id": 0,
+                "rider_category_id": 0,
             }
             route_networks.loc[len(route_networks)] = {
                 "route_id": rule.route_id,
@@ -155,6 +165,7 @@ def convert_fares(input, output):
                 .iloc[0]
                 .currency_type,
                 "fare_media_id": 0,
+                "rider_category_id": 0,
             }
             fare_leg_rules.loc[len(fare_leg_rules)] = {
                 "from_area_id": rule.origin_id,
@@ -178,6 +189,7 @@ def convert_fares(input, output):
                         "amount": attrib.price,
                         "currency": attrib.currency_type,
                         "fare_media_id": 0,
+                        "rider_category_id": 0,
                     }
                     route_networks.loc[len(route_networks)] = {
                         "route_id": route.route_id,
@@ -204,6 +216,7 @@ def convert_fares(input, output):
 
     # Add new files
     fare_media.to_csv(f"{output_dir}/fare_media.txt", index=False)
+    rider_categories.to_csv(f"{output_dir}/rider_categories.txt", index=False)
     if len(fare_products) != 0:
         fare_products.to_csv(f"{output_dir}/fare_products.txt", index=False)
     if len(fare_leg_rules) != 0:
