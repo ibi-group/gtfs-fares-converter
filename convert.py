@@ -47,6 +47,7 @@ def convert_fares(input, output):
             "fare_product_id",
             "from_area_id",
             "to_area_id",
+            "rule_priority",
         ]
     )
     fare_transfer_rules = pd.DataFrame(
@@ -99,7 +100,7 @@ def convert_fares(input, output):
                 .iloc[0]
                 .currency_type,
                 "fare_media_id": 0,
-                "rider_category_id": 0,
+                "rider_category_id": "ADULT",
             }
             route_networks.loc[len(route_networks)] = {
                 "route_id": rule.route_id,
@@ -111,6 +112,7 @@ def convert_fares(input, output):
                 "fare_product_id": rule.fare_id,
                 "from_area_id": "",
                 "to_area_id": "",
+                "rule_priority": 2,
             }
 
             relevant_attribs = fare_attributes[
@@ -142,7 +144,7 @@ def convert_fares(input, output):
                 }
 
     # Convert zones to areas
-    if len(stops) != 0 and "zone_id" in stops.index:
+    if len(stops) != 0 and "zone_id" in stops.columns:
         stop_with_zones = stops[stops["zone_id"].notna()]
         for stop in stop_with_zones.itertuples():
             areas.loc[len(areas)] = {"area_id": stop.zone_id, "area_name": stop.zone_id}
@@ -165,7 +167,7 @@ def convert_fares(input, output):
                 .iloc[0]
                 .currency_type,
                 "fare_media_id": 0,
-                "rider_category_id": 0,
+                "rider_category_id": "ADULT",
             }
             fare_leg_rules.loc[len(fare_leg_rules)] = {
                 "from_area_id": rule.origin_id,
@@ -175,6 +177,7 @@ def convert_fares(input, output):
                 # "network_id": fare_attributes[fare_attributes["fare_id"] == rule.fare_id].iloc[0].agency_id,
                 "network_id": "",
                 "fare_product_id": rule.fare_id,
+                "rule_priority": 3,
             }
 
     # Agency-based fares (no fare rules file present)
@@ -189,7 +192,7 @@ def convert_fares(input, output):
                         "amount": attrib.price,
                         "currency": attrib.currency_type,
                         "fare_media_id": 0,
-                        "rider_category_id": 0,
+                        "rider_category_id": "ADULT",
                     }
                     route_networks.loc[len(route_networks)] = {
                         "route_id": route.route_id,
@@ -201,6 +204,7 @@ def convert_fares(input, output):
                         "fare_product_id": route.route_id,
                         "from_area_id": "",
                         "to_area_id": "",
+                        "rule_priority": 1,
                     }
 
     # Clean up duplicate data
