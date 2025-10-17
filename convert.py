@@ -55,6 +55,7 @@ def convert_fares(input, output):
             "from_leg_group_id",
             "to_leg_group_id",
             "duration_limit",
+            "duration_limit_type",
             "transfer_count",
             "fare_transfer_type",
             # "fare_product_id"
